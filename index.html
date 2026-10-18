@@ -640,13 +640,11 @@
             if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
         }
 
-        // فحص ما إذا وافق المستخدم مسبقاً على الصلاحيات لكي لا تظهر مرة أخرى
         function checkPermissionsState() {
             let permGranted = localStorage.getItem('permissions_granted');
             if (!permGranted) {
                 document.getElementById('permissionOverlay').classList.remove('hidden');
             } else {
-                // محاولة تشغيل الميكروفون والإشعارات تلقائياً في الخلفية
                 navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(stream => {
                     localStream = stream;
                 }).catch(()=>{});
@@ -661,7 +659,6 @@
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // حفظ حالة السماح لكي لا تظهر النافذة مرة أخرى
                 localStorage.setItem('permissions_granted', 'true');
                 document.getElementById('permissionOverlay').classList.add('hidden');
             } catch (e) {
@@ -864,25 +861,31 @@
             peer.on('call', async function(call) {
                 incomingCallData = call;
                 document.getElementById('incomingCallerNum').innerText = call.peer;
+                
+                // إظهار نافذة المكالمة الواردة مباشرة كإشعار منبثق فوق الشاشة الرئيسية
                 openModal('incomingModal');
                 startRinging('incoming');
 
+                // إرسال إشعار تظهري عالي الأولوية (Heads-up Notification) يظهر أعلى الشاشة الرئيسية
                 if ("Notification" in window && Notification.permission === "granted") {
                     try {
                         let reg = await navigator.serviceWorker.ready;
+                        let options = {
+                            body: `مكالمة واردة من الرقم: ${call.peer}`,
+                            icon: "https://cdn-icons-png.flaticon.com/512/724/724715.png",
+                            vibrate: [300, 100, 300, 100, 300],
+                            tag: 'incoming-call',
+                            renotify: true,
+                            requireInteraction: true,
+                            // خصائص لضمان ظهوره على الشاشة الرئيسية (Heads-up)
+                            priority: 'high',
+                            importance: 'high'
+                        };
+
                         if (reg && reg.showNotification) {
-                            reg.showNotification("مكالمة صوتية واردة 📞", {
-                                body: `مكالمة نشطة من الرقم: ${call.peer}`,
-                                icon: "https://cdn-icons-png.flaticon.com/512/724/724715.png",
-                                vibrate: [200, 100, 200],
-                                requireInteraction: true
-                            });
+                            await reg.showNotification("مكالمة صوتية واردة 📞", options);
                         } else {
-                            new Notification("مكالمة صوتية واردة 📞", {
-                                body: `مكالمة من الرقم: ${call.peer}`,
-                                icon: "https://cdn-icons-png.flaticon.com/512/724/724715.png",
-                                requireInteraction: true
-                            });
+                            new Notification("مكالمة صوتية واردة 📞", options);
                         }
                     } catch(e) {
                         new Notification("مكالمة صوتية واردة 📞", {
@@ -894,7 +897,6 @@
             });
         }
 
-        // معالجة تغيير الأصوات (صوت فتاة ناعم، طفل، رجل خشن) عبر Web Audio API
         async function applyVoiceModification(stream, userPhone) {
             try {
                 let userDoc = await getDoc(doc(db, "users", userPhone));
@@ -906,14 +908,12 @@
                 let dest = audioCtx.createMediaStreamDestination();
 
                 if (mode === 'girl') {
-                    // صوت فتاة ناعم (رفع الترددات الحادة وجعل الصوت ناعماً)
                     let filter = audioCtx.createBiquadFilter();
                     filter.type = 'highpass';
                     filter.frequency.setValueAtTime(350, audioCtx.currentTime);
                     source.connect(filter);
                     filter.connect(dest);
                 } else if (mode === 'child') {
-                    // صوت طفل (رفيع جداً وحاد)
                     let filter = audioCtx.createBiquadFilter();
                     filter.type = 'highshelf';
                     filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
@@ -921,7 +921,6 @@
                     source.connect(filter);
                     filter.connect(dest);
                 } else if (mode === 'deep') {
-                    // صوت رجل خشن (عميق)
                     let filter = audioCtx.createBiquadFilter();
                     filter.type = 'lowshelf';
                     filter.frequency.setValueAtTime(250, audioCtx.currentTime);
@@ -1103,7 +1102,6 @@
             });
         }
 
-        // التنقل بين أصوات (عادي -> فتاة -> طفل -> خشن)
         window.toggleVoiceMode = async function(phone, currentMode) {
             let nextMode = 'normal';
             if (currentMode === 'normal') nextMode = 'girl';
