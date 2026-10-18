@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الاتصال الصوتي الآمنة</title>
+    <!-- مكتبة PeerJS للاتصال الصوتي المباشر عبر الإنترنت -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --surface-card: #252525;
+            --primary-color: #00e676;
+            --primary-hover: #00c853;
+            --danger-color: #ff5252;
+            --text-main: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --border-color: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 { 
+            font-size: 18px; 
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+            user-select: none;
+        }
+
+        .auth-btns button {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin-left: 8px;
+        }
+
+        .auth-btns button:hover { 
+            background: var(--primary-color);
+            color: var(--bg-color);
+        }
+
+        .container {
+            flex: 1;
+            max-width: 440px;
+            margin: 20px auto;
+            background: var(--surface-card);
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            width: 100%;
+        }
+
+        .hidden { display: none !important; }
+
+        /* لوحة المفاتيح (من الشمال لليمين) */
+        .keypad-container {
+            text-align: center;
+        }
+
+        .display-number {
+            font-size: 26px;
+            letter-spacing: 3px;
+            background: var(--surface-color);
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            direction: ltr;
+            font-weight: bold;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            direction: ltr;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .key {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 15px;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .key:hover { 
+            background: #2a2a2a;
+            border-color: #555;
+        }
+
+        .call-btn {
+            background: var(--primary-color) !important;
+            color: var(--bg-color) !important;
+            border: none !important;
+        }
+
+        .call-btn:hover { 
+            background: var(--primary-hover) !important; 
+        }
+
+        .delete-btn {
+            background: rgba(255, 82, 82, 0.1) !important;
+            color: var(--danger-color) !important;
+            border-color: rgba(255, 82, 82, 0.3) !important;
+        }
+
+        .call-action-btn {
+            width: 100%;
+            background: var(--primary-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 12px;
+            font-size: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        /* قسم سجل المكالمات للمستخدم */
+        .calls-history-section {
+            margin-top: 20px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            text-align: right;
+        }
+
+        .calls-history-section h4 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .call-item {
+            font-size: 12px;
+            padding: 6px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+            direction: ltr;
+        }
+
+        /* النوافذ المنبثقة (Modals) */
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h3 {
+            color: var(--text-main);
+            margin-bottom: 15px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 6px;
+            direction: ltr;
+            font-size: 15px;
+        }
+
+        .modal-content button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            margin-top: 10px;
+        }
+
+        /* منطقة زر الأدمن المخفي في أقصى اليسار بالأسفل */
+        #secretAdminTrigger {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 50px;
+            z-index: 9999;
+            cursor: default;
+        }
+
+        footer.admin-section {
+            background: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            padding: 20px;
+            margin-top: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: var(--surface-card);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        th { background: #2a2a2a; color: var(--text-main); }
+        .status-pending { color: #ffb74d; font-weight: bold; }
+        .status-approved { color: var(--primary-color); font-weight: bold; }
+        .status-blocked { color: var(--danger-color); font-weight: bold; }
+        
+        .action-btns button {
+            padding: 5px 8px;
+            margin: 2px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .btn-approve { background: #2e7d32; color: white; }
+        .btn-block { background: #f57f17; color: white; }
+        .btn-delete { background: #c62828; color: white; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>منصة الاتصال الصوتي (075)</h1>
+        <div class="auth-btns" id="headerAuth">
+            <button onclick="openModal('registerModal')">تسجيل حساب</button>
+            <button onclick="openModal('loginModal')">تسجيل دخول</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- لوحة المفاتيح الرئيسية للاتصال -->
+        <div class="keypad-container">
+            <div class="display-number" id="dialDisplay"></div>
+            <div class="keypad">
+                <button class="key" onclick="pressKey('1')">1</button>
+                <button class="key" onclick="pressKey('2')">2</button>
+                <button class="key" onclick="pressKey('3')">3</button>
+                <button class="key" onclick="pressKey('4')">4</button>
+                <button class="key" onclick="pressKey('5')">5</button>
+                <button class="key" onclick="pressKey('6')">6</button>
+                <button class="key" onclick="pressKey('7')">7</button>
+                <button class="key" onclick="pressKey('8')">8</button>
+                <button class="key" onclick="pressKey('9')">9</button>
+                <button class="key delete-btn" onclick="clearKey()">C</button>
+                <button class="key" onclick="pressKey('0')">0</button>
+                <button class="key call-btn" onclick="makeCall()">📞</button>
+            </div>
+            <button class="call-action-btn" onclick="makeCall()">اتصال مباشر</button>
+        </div>
+
+        <!-- سجل المكالمات للمستخدم المسجل -->
+        <div id="userCallsSection" class="calls-history-section hidden">
+            <h4>سجل المكالمات الأخيرة</h4>
+            <div id="callsListContainer">
+                <!-- يتم تعبئتها ديناميكياً -->
+            </div>
+        </div>
+    </div>
+
+    <!-- عنصر مخفي في أقصى اليسار بالأسفل للنقر 3 مرات -->
+    <div id="secretAdminTrigger" onclick="handleSecretAdminClick()" title=""></div>
+
+    <!-- نافذة المكالمة الجارية -->
+    <div id="callModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="callStatusText">جاري الاتصال...</h3>
+            <p id="targetCallingNumber" style="font-size: 20px; font-weight: bold; margin: 15px 0; color: var(--primary-color);"></p>
+            <audio id="remoteAudio" autoplay></audio>
+            <button onclick="endCall()" style="background: var(--danger-color); color: white;">إنهاء المكالمة</button>
+        </div>
+    </div>
+
+    <!-- نافذة استقبال مكالمة واردة -->
+    <div id="incomingModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>مكالمة واردة من الرقم:</h3>
+            <p id="incomingCallerNum" style="font-size: 22px; font-weight: bold; margin: 15px 0; color: var(--primary-color);"></p>
+            <button onclick="acceptIncomingCall()" style="background: #2e7d32; color: white;">قبول المكالمة</button>
+            <button onclick="rejectIncomingCall()" style="background: var(--danger-color); color: white; margin-top: 5px;">رفض</button>
+        </div>
+    </div>
+
+    <!-- نافذة تسجيل حساب -->
+    <div id="registerModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>تسجيل حساب جديد</h3>
+            <input type="text" id="regUsername" placeholder="اسم المستخدم">
+            <input type="password" id="regPassword" placeholder="كلمة المرور">
+            <input type="text" id="regPhone" placeholder="075xxxxxxxx" maxlength="10">
+            <button onclick="registerUser()">إرسال طلب التسجيل</button>
+            <button onclick="closeModal('registerModal')" style="background: #424242; color: white; margin-top:5px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة تسجيل دخول -->
+    <div id="loginModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>تسجيل الدخول</h3>
+            <input type="text" id="logPhone" placeholder="رقم الهاتف (075xxxxxxxx)">
+            <input type="password" id="logPassword" placeholder="كلمة المرور">
+            <button onclick="loginUser()">دخول</button>
+            <button onclick="closeModal('loginModal')" style="background: #424242; color: white; margin-top:5px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- لوحة تحكم الأدمن في الأسفل -->
+    <footer id="adminFooter" class="admin-section hidden">
+        <div id="adminLoginArea" style="text-align: center;">
+            <h3 style="margin-bottom: 10px; color: var(--text-main);">لوحة تحكم الأدمن</h3>
+            <input type="password" id="adminPassInput" placeholder="كلمة المرور (ooddaayy)" style="padding: 8px; width: 220px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--surface-card); color: white; margin-left: 5px; direction: ltr;">
+            <button onclick="adminLogin()" style="padding: 8px 15px; background: var(--primary-color); border: none; color: var(--bg-color); border-radius: 4px; cursor: pointer; font-weight: bold;">دخول الأدمن</button>
+        </div>
+
+        <div id="adminDashboardArea" class="admin-dashboard hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="color: var(--text-main);">إدارة الأرقام والمستخدمين</h3>
+                <button onclick="logoutAdmin()" style="background: var(--danger-color); border:none; color:white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">إخفاء الأدمن</button>
+            </div>
+            <div style="margin: 10px 0;">
+                <input type="text" id="adminSearchInput" placeholder="بحث عن رقم هاتف أو اسم..." onkeyup="renderAdminTable()" style="padding: 8px; width: 100%; border-radius: 4px; border: 1px solid var(--border-color); background: var(--surface-card); color: white; direction: ltr;">
+            </div>
+            <div style="max-height: 250px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الرقم</th>
+                            <th>المستخدم</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Firebase SDKs وربط القاعدة -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCe1dVtb6YvrKXhtQSdKT9lM1TM1Bd-HFQ",
+            authDomain: "call075.firebaseapp.com",
+            projectId: "call075",
+            storageBucket: "call075.firebasestorage.app",
+            messagingSenderId: "43002521039",
+            appId: "1:43002521039:web:fd9808fdec0b58e87e1eba",
+            measurementId: "G-NY7TR01DED"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentUser = JSON.parse(localStorage.getItem('current_user')) || null;
+        let peer = null;
+        let currentCall = null;
+        let incomingCallData = null;
+        let cloudUsers = [];
+
+        // متغيرات النقر 3 مرات في الزاوية اليسرى السفلية
+        let leftClickCount = 0;
+        let leftClickTimer = null;
+
+        window.handleSecretAdminClick = function() {
+            leftClickCount++;
+            clearTimeout(leftClickTimer);
+
+            if (leftClickCount === 3) {
+                leftClickCount = 0;
+                let footer = document.getElementById('adminFooter');
+                footer.classList.toggle('hidden');
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            } else {
+                leftClickTimer = setTimeout(() => {
+                    leftClickCount = 0;
+                }, 600);
+            }
+        };
+
+        window.onload = async function() {
+            requestPermissions();
+            updateHeader();
+            await fetchCloudUsers();
+            if (currentUser && currentUser.status === 'approved') {
+                initPeer(currentUser.phone);
+                loadCallHistory(currentUser.phone);
+            }
+        };
+
+        // طلب صلاحيات الإشعارات والميكروفون فوراً
+        async function requestPermissions() {
+            try {
+                if ("Notification" in window && Notification.permission !== "granted") {
+                    await Notification.requestPermission();
+                }
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (e) {
+                console.log("الصلاحيات لم تمنح بالكامل:", e);
+            }
+        }
+
+        async function fetchCloudUsers() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "users"));
+                cloudUsers = [];
+                querySnapshot.forEach((docSnap) => {
+                    cloudUsers.push(docSnap.data());
+                });
+            } catch (e) {
+                console.error("خطأ في جلب البيانات:", e);
+            }
+        }
+
+        window.openModal = function(id) { document.getElementById(id).classList.remove('hidden'); }
+        window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function updateHeader() {
+            const headerAuth = document.getElementById('headerAuth');
+            const callsSection = document.getElementById('userCallsSection');
+            if (currentUser) {
+                headerAuth.innerHTML = `
+                    <span style="margin-left: 15px; font-weight: bold; color: var(--primary-color);">👤 ${currentUser.phone}</span>
+                    <button onclick="logoutUser()" style="border-color: var(--danger-color); color: var(--danger-color);">تسجيل خروج</button>
+                `;
+                callsSection.classList.remove('hidden');
+            } else {
+                headerAuth.innerHTML = `
+                    <button onclick="openModal('registerModal')">تسجيل حساب</button>
+                    <button onclick="openModal('loginModal')">تسجيل دخول</button>
+                `;
+                callsSection.classList.add('hidden');
+            }
+        }
+
+        // لوحة المفاتيح
+        let dialNumber = "";
+        window.pressKey = function(num) {
+            dialNumber += num;
+            document.getElementById('dialDisplay').innerText = dialNumber;
+        }
+        window.clearKey = function() {
+            dialNumber = "";
+            document.getElementById('dialDisplay').innerText = dialNumber;
+        }
+
+        // تسجيل البيانات
+        window.registerUser = async function() {
+            let username = document.getElementById('regUsername').value.trim();
+            let password = document.getElementById('regPassword').value.trim();
+            let phone = document.getElementById('regPhone').value.trim();
+
+            if (!username || !password || !phone || !phone.startsWith('075') || phone.length !== 10) {
+                alert("الرجاء تأكد من إدخال البيانات بالشكل الصحيح (رقم يبدأ بـ 075 ومكون من 10 أرقام).");
+                return;
+            }
+
+            await fetchCloudUsers();
+            if (cloudUsers.find(u => u.phone === phone)) {
+                alert("الرقم مسجل مسبقاً.");
+                return;
+            }
+
+            await setDoc(doc(db, "users", phone), { username, password, phone, status: 'pending' });
+            alert("تم إرسال الطلب بنجاح بانتظار تفعيل الأدمن.");
+            closeModal('registerModal');
+        }
+
+        window.loginUser = async function() {
+            let phone = document.getElementById('logPhone').value.trim();
+            let password = document.getElementById('logPassword').value.trim();
+
+            await fetchCloudUsers();
+            let user = cloudUsers.find(u => u.phone === phone && u.password === password);
+            if (!user) {
+                alert("بيانات الدخول غير صحيحة.");
+                return;
+            }
+            if (user.status !== 'approved') {
+                alert("الحساب غير مفعل أو معطل حالياً من قبل الإدارة.");
+                return;
+            }
+
+            currentUser = user;
+            localStorage.setItem('current_user', JSON.stringify(currentUser));
+            closeModal('loginModal');
+            updateHeader();
+            initPeer(currentUser.phone);
+            loadCallHistory(currentUser.phone);
+            alert("تم تسجيل الدخول بنجاح!");
+        }
+
+        window.logoutUser = function() {
+            currentUser = null;
+            localStorage.removeItem('current_user');
+            if (peer) peer.destroy();
+            updateHeader();
+            alert("تم تسجيل الخروج.");
+        }
+
+        // حفظ سجل المكالمات في Firestore
+        async function recordCallLog(caller, receiver, type) {
+            try {
+                await addDoc(collection(db, "calls"), {
+                    caller: caller,
+                    receiver: receiver,
+                    type: type, // 'outgoing', 'incoming', 'missed'
+                    timestamp: new Date().toLocaleTimeString()
+                });
+                if (currentUser) loadCallHistory(currentUser.phone);
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadCallHistory(phone) {
+            try {
+                const q1 = query(collection(db, "calls"), where("caller", "==", phone));
+                const q2 = query(collection(db, "calls"), where("receiver", "==", phone));
+                
+                const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+                let historyContainer = document.getElementById('callsListContainer');
+                historyContainer.innerHTML = "";
+
+                let allCalls = [];
+                snap1.forEach(d => allCalls.push(d.data()));
+                snap2.forEach(d => allCalls.push(d.data()));
+
+                if (allCalls.length === 0) {
+                    historyContainer.innerHTML = `<div style="text-align:center; font-size:11px; color:#777;">لا توجد مكالمات سابقة</div>`;
+                    return;
+                }
+
+                allCalls.forEach(call => {
+                    let typeLabel = call.type === 'outgoing' ? 'صادرة ↗' : (call.type === 'incoming' ? 'مستلمة ↙' : 'فائتة ✖');
+                    let otherParty = call.caller === phone ? call.receiver : call.caller;
+                    let div = document.createElement('div');
+                    div.className = 'call-item';
+                    div.innerHTML = `<span>${otherParty}</span> <span>${typeLabel}</span> <span style="color:#888;">${call.timestamp}</span>`;
+                    historyContainer.appendChild(div);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function initPeer(phoneId) {
+            peer = new Peer(phoneId, {
+                config: {'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }]}
+            });
+
+            peer.on('call', function(call) {
+                incomingCallData = call;
+                document.getElementById('incomingCallerNum').innerText = call.peer;
+                openModal('incomingModal');
+                
+                // تنبيه إشعارات المتصفح
+                if (Notification.permission === "granted") {
+                    new Notification("مكالمة واردة جديدة", { body: `من الرقم: ${call.peer}` });
+                }
+            });
+        }
+
+        window.makeCall = async function() {
+            if (!currentUser || currentUser.status !== 'approved') {
+                alert("يرجى تسجيل الدخول بحساب مفعل أولاً.");
+                openModal('loginModal');
+                return;
+            }
+
+            let targetNum = dialNumber.trim();
+            if (!targetNum || targetNum === currentUser.phone) {
+                alert("رقم غير صالح أو رقمك الشخصي.");
+                return;
+            }
+
+            document.getElementById('targetCallingNumber').innerText = targetNum;
+            document.getElementById('callStatusText').innerText = "جاري الاتصال بـ " + targetNum + "...";
+            openModal('callModal');
+
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                let call = peer.call(targetNum, stream);
+                currentCall = call;
+                recordCallLog(currentUser.phone, targetNum, 'outgoing');
+
+                call.on('stream', remoteStream => {
+                    document.getElementById('remoteAudio').srcObject = remoteStream;
+                    document.getElementById('callStatusText').innerText = "المكالمة جارية الآن...";
+                });
+                call.on('close', () => { endCallUI(); });
+            }).catch(err => {
+                alert("تعذر الوصول للميكروفون.");
+                closeModal('callModal');
+            });
+        }
+
+        window.acceptIncomingCall = function() {
+            closeModal('incomingModal');
+            openModal('callModal');
+            let callerNum = incomingCallData.peer;
+            document.getElementById('targetCallingNumber').innerText = callerNum;
+            document.getElementById('callStatusText').innerText = "المكالمة جارية الآن...";
+
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                incomingCallData.answer(stream);
+                currentCall = incomingCallData;
+                recordCallLog(callerNum, currentUser.phone, 'incoming');
+
+                currentCall.on('stream', remoteStream => {
+                    document.getElementById('remoteAudio').srcObject = remoteStream;
+                });
+                currentCall.on('close', () => { endCallUI(); });
+            });
+        }
+
+        window.rejectIncomingCall = function() {
+            if (incomingCallData) {
+                recordCallLog(incomingCallData.peer, currentUser.phone, 'missed');
+                incomingCallData.close();
+            }
+            closeModal('incomingModal');
+        }
+
+        window.endCall = function() {
+            if (currentCall) currentCall.close();
+            endCallUI();
+        }
+
+        function endCallUI() {
+            closeModal('callModal');
+            document.getElementById('remoteAudio').srcObject = null;
+            currentCall = null;
+        }
+
+        // لوحة تحكم الأدمن
+        window.adminLogin = async function() {
+            let pass = document.getElementById('adminPassInput').value;
+            if (pass === 'ooddaayy') {
+                document.getElementById('adminLoginArea').classList.add('hidden');
+                document.getElementById('adminDashboardArea').classList.remove('hidden');
+                await fetchCloudUsers();
+                renderAdminTable();
+            } else {
+                alert("كلمة المرور خطأ");
+            }
+        }
+
+        window.logoutAdmin = function() {
+            document.getElementById('adminLoginArea').classList.remove('hidden');
+            document.getElementById('adminDashboardArea').classList.add('hidden');
+            document.getElementById('adminFooter').classList.add('hidden');
+        }
+
+        window.renderAdminTable = function() {
+            let tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = "";
+            cloudUsers.forEach(u => {
+                let statusText = u.status === 'pending' ? "قيد الانتظار" : (u.status === 'approved' ? "مفعل" : "معطل");
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${u.phone}</td>
+                    <td>${u.username}</td>
+                    <td>${statusText}</td>
+                    <td>
+                        ${u.status !== 'approved' ? `<button class="btn-approve" onclick="adminUpdate('${u.phone}', 'approved')">تفعيل</button>` : ''}
+                        ${u.status !== 'blocked' ? `<button class="btn-block" onclick="adminUpdate('${u.phone}', 'blocked')">تعطيل</button>` : ''}
+                        <button class="btn-delete" onclick="adminDel('${u.phone}')">حذف</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.adminUpdate = async function(phone, status) {
+            await updateDoc(doc(db, "users", phone), { status });
+            await fetchCloudUsers();
+            renderAdminTable();
+        }
+
+        window.adminDel = async function(phone) {
+            if (confirm("هل تريد الحذف؟")) {
+                await deleteDoc(doc(db, "users", phone));
+                await fetchCloudUsers();
+                renderAdminTable();
+            }
+        }
+    </script>
+</body>
+</html>
