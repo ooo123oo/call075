@@ -241,6 +241,17 @@
             margin-top: 10px;
         }
 
+        /* نافذة طلب السماح الإجباري بالإشعارات */
+        #permissionOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
         /* منطقة زر الأدمن المخفي في أقصى اليسار بالأسفل */
         #secretAdminTrigger {
             position: fixed;
@@ -295,6 +306,15 @@
 </head>
 <body>
 
+    <!-- نافذة إجبارية لتفعيل الإشعارات والميكروفون عند الدخول -->
+    <div id="permissionOverlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>تفعيل الإشعارات والاتصال</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">لتلقي المكالمات وإصدار أصوات الرنين وسماع الطرف الآخر، يرجى السماح بالإشعارات وصلاحيات الميكروفون.</p>
+            <button onclick="requestMandatoryPermissions()">منح الصلاحيات والدخول</button>
+        </div>
+    </div>
+
     <header>
         <h1>منصة الاتصال الصوتي (075)</h1>
         <div class="auth-btns" id="headerAuth">
@@ -327,16 +347,14 @@
         <!-- سجل المكالمات للمستخدم المسجل -->
         <div id="userCallsSection" class="calls-history-section hidden">
             <h4>سجل المكالمات الأخيرة</h4>
-            <div id="callsListContainer">
-                <!-- يتم تعبئتها ديناميكياً -->
-            </div>
+            <div id="callsListContainer"></div>
         </div>
     </div>
 
     <!-- عنصر مخفي في أقصى اليسار بالأسفل للنقر 3 مرات -->
     <div id="secretAdminTrigger" onclick="handleSecretAdminClick()" title=""></div>
 
-    <!-- نافذة المكالمة الجارية -->
+    <!-- نافذة المكالمة الجارية للمتصل -->
     <div id="callModal" class="modal hidden">
         <div class="modal-content">
             <h3 id="callStatusText">جاري الاتصال...</h3>
@@ -346,13 +364,13 @@
         </div>
     </div>
 
-    <!-- نافذة استقبال مكالمة واردة -->
+    <!-- نافذة استقبال مكالمة واردة للمستقبل -->
     <div id="incomingModal" class="modal hidden">
         <div class="modal-content">
             <h3>مكالمة واردة من الرقم:</h3>
             <p id="incomingCallerNum" style="font-size: 22px; font-weight: bold; margin: 15px 0; color: var(--primary-color);"></p>
-            <button onclick="acceptIncomingCall()" style="background: #2e7d32; color: white;">قبول المكالمة</button>
-            <button onclick="rejectIncomingCall()" style="background: var(--danger-color); color: white; margin-top: 5px;">رفض</button>
+            <button onclick="acceptIncomingCall()" style="background: #2e7d32; color: white;">رد 📞</button>
+            <button onclick="rejectIncomingCall()" style="background: var(--danger-color); color: white; margin-top: 5px;">إنهاء / رفض ❌</button>
         </div>
     </div>
 
@@ -414,7 +432,7 @@
     <!-- Firebase SDKs وربط القاعدة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCe1dVtb6YvrKXhtQSdKT9lM1TM1Bd-HFQ",
@@ -434,8 +452,73 @@
         let currentCall = null;
         let incomingCallData = null;
         let cloudUsers = [];
+        let audioCtx = null;
+        let ringInterval = null;
 
-        // متغيرات النقر 3 مرات في الزاوية اليسرى السفلية
+        // دالة توليد الأصوات (رنين، إشعار، طوط طوط)
+        function playTone(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                let now = audioCtx.currentTime;
+
+                if (type === 'ring') {
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(480, now + 0.2);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                    osc.start(now);
+                    osc.stop(now + 0.8);
+                } else if (type === 'incoming') {
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'busy') {
+                    osc.frequency.setValueAtTime(400, now);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch(e) {}
+        }
+
+        function startRinging(type) {
+            stopRinging();
+            ringInterval = setInterval(() => {
+                playTone(type);
+            }, 1000);
+        }
+
+        function stopRinging() {
+            if (ringInterval) {
+                clearInterval(ringInterval);
+                ringInterval = null;
+            }
+        }
+
+        window.requestMandatoryPermissions = async function() {
+            try {
+                if ("Notification" in window) {
+                    await Notification.requestPermission();
+                }
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                document.getElementById('permissionOverlay').classList.add('hidden');
+            } catch (e) {
+                alert("يجب السماح بالميكروفون والإشعارات لكي تعمل منصة الاتصال بنجاح.");
+            }
+        };
+
+        // متغيرات النقر 3 مرات للادمن في الزاوية اليسرى السفلية
         let leftClickCount = 0;
         let leftClickTimer = null;
 
@@ -449,44 +532,38 @@
                 footer.classList.toggle('hidden');
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             } else {
-                leftClickTimer = setTimeout(() => {
-                    leftClickCount = 0;
-                }, 600);
+                leftClickTimer = setTimeout(() => { leftClickCount = 0; }, 600);
             }
         };
 
         window.onload = async function() {
-            requestPermissions();
             updateHeader();
             await fetchCloudUsers();
             if (currentUser && currentUser.status === 'approved') {
+                // تحديث حالة الاتصال في السحابة بأن المستخدم متواجد Online
+                await updateDoc(doc(db, "users", currentUser.phone), { isOnline: true }).catch(()=>{});
                 initPeer(currentUser.phone);
                 loadCallHistory(currentUser.phone);
             }
         };
 
-        // طلب صلاحيات الإشعارات والميكروفون فوراً
-        async function requestPermissions() {
-            try {
-                if ("Notification" in window && Notification.permission !== "granted") {
-                    await Notification.requestPermission();
-                }
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-            } catch (e) {
-                console.log("الصلاحيات لم تمنح بالكامل:", e);
+        // تحديث حالة الخروج عند إغلاق المتصفح أو علامة التبويب
+        window.addEventListener('beforeunload', async () => {
+            if (currentUser) {
+                const userRef = doc(db, "users", currentUser.phone);
+                // استخدام navigator.sendBeacon أو تحديث متزامن خفيف
+                try {
+                    await updateDoc(userRef, { isOnline: false });
+                } catch(e) {}
             }
-        }
+        });
 
         async function fetchCloudUsers() {
             try {
                 const querySnapshot = await getDocs(collection(db, "users"));
                 cloudUsers = [];
-                querySnapshot.forEach((docSnap) => {
-                    cloudUsers.push(docSnap.data());
-                });
-            } catch (e) {
-                console.error("خطأ في جلب البيانات:", e);
-            }
+                querySnapshot.forEach((docSnap) => { cloudUsers.push(docSnap.data()); });
+            } catch (e) {}
         }
 
         window.openModal = function(id) { document.getElementById(id).classList.remove('hidden'); }
@@ -521,14 +598,13 @@
             document.getElementById('dialDisplay').innerText = dialNumber;
         }
 
-        // تسجيل البيانات
         window.registerUser = async function() {
             let username = document.getElementById('regUsername').value.trim();
             let password = document.getElementById('regPassword').value.trim();
             let phone = document.getElementById('regPhone').value.trim();
 
             if (!username || !password || !phone || !phone.startsWith('075') || phone.length !== 10) {
-                alert("الرجاء تأكد من إدخال البيانات بالشكل الصحيح (رقم يبدأ بـ 075 ومكون من 10 أرقام).");
+                alert("الرجاء تأكد من إدخال البيانات بالشكل الصحيح.");
                 return;
             }
 
@@ -538,7 +614,7 @@
                 return;
             }
 
-            await setDoc(doc(db, "users", phone), { username, password, phone, status: 'pending' });
+            await setDoc(doc(db, "users", phone), { username, password, phone, status: 'pending', isOnline: false });
             alert("تم إرسال الطلب بنجاح بانتظار تفعيل الأدمن.");
             closeModal('registerModal');
         }
@@ -554,12 +630,16 @@
                 return;
             }
             if (user.status !== 'approved') {
-                alert("الحساب غير مفعل أو معطل حالياً من قبل الإدارة.");
+                alert("الحساب غير مفعل أو معطل حالياً.");
                 return;
             }
 
             currentUser = user;
             localStorage.setItem('current_user', JSON.stringify(currentUser));
+            
+            // تعيين الحالة إلى Online في السحابة
+            await updateDoc(doc(db, "users", currentUser.phone), { isOnline: true });
+
             closeModal('loginModal');
             updateHeader();
             initPeer(currentUser.phone);
@@ -567,32 +647,35 @@
             alert("تم تسجيل الدخول بنجاح!");
         }
 
-        window.logoutUser = function() {
+        window.logoutUser = async function() {
+            if (currentUser) {
+                try {
+                    await updateDoc(doc(db, "users", currentUser.phone), { isOnline: false });
+                } catch(e) {}
+            }
             currentUser = null;
             localStorage.removeItem('current_user');
             if (peer) peer.destroy();
             updateHeader();
-            alert("تم تسجيل الخروج.");
+            alert("تم تسجيل الخروج بنجاح.");
         }
 
-        // حفظ سجل المكالمات في Firestore
         async function recordCallLog(caller, receiver, type) {
             try {
                 await addDoc(collection(db, "calls"), {
                     caller: caller,
                     receiver: receiver,
-                    type: type, // 'outgoing', 'incoming', 'missed'
+                    type: type,
                     timestamp: new Date().toLocaleTimeString()
                 });
                 if (currentUser) loadCallHistory(currentUser.phone);
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         async function loadCallHistory(phone) {
             try {
                 const q1 = query(collection(db, "calls"), where("caller", "==", phone));
                 const q2 = query(collection(db, "calls"), where("receiver", "==", phone));
-                
                 const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
                 let historyContainer = document.getElementById('callsListContainer');
                 historyContainer.innerHTML = "";
@@ -614,7 +697,7 @@
                     div.innerHTML = `<span>${otherParty}</span> <span>${typeLabel}</span> <span style="color:#888;">${call.timestamp}</span>`;
                     historyContainer.appendChild(div);
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         function initPeer(phoneId) {
@@ -627,9 +710,14 @@
                 document.getElementById('incomingCallerNum').innerText = call.peer;
                 openModal('incomingModal');
                 
-                // تنبيه إشعارات المتصفح
+                startRinging('incoming');
+
                 if (Notification.permission === "granted") {
-                    new Notification("مكالمة واردة جديدة", { body: `من الرقم: ${call.peer}` });
+                    new Notification("مكالمة صوتية واردة", {
+                        body: `مكالمة من الرقم: ${call.peer}`,
+                        icon: "https://cdn-icons-png.flaticon.com/512/724/724715.png",
+                        requireInteraction: true
+                    });
                 }
             });
         }
@@ -647,9 +735,27 @@
                 return;
             }
 
+            // فحص هل المستخدم الآخر مسجل دخول ومتاح (Online)
+            try {
+                let targetDocRef = doc(db, "users", targetNum);
+                let targetSnap = await getDoc(targetDocRef);
+                
+                if (!targetSnap.exists() || !targetSnap.data().isOnline) {
+                    playTone('busy');
+                    setTimeout(() => playTone('busy'), 350);
+                    alert("عذراً، المستخدم غير متاح حالياً (غير مسجل الدخول).");
+                    return;
+                }
+            } catch(e) {
+                alert("حدث خطأ أثناء التحقق من حالة المستخدم.");
+                return;
+            }
+
             document.getElementById('targetCallingNumber').innerText = targetNum;
             document.getElementById('callStatusText').innerText = "جاري الاتصال بـ " + targetNum + "...";
             openModal('callModal');
+
+            startRinging('ring');
 
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 let call = peer.call(targetNum, stream);
@@ -657,17 +763,26 @@
                 recordCallLog(currentUser.phone, targetNum, 'outgoing');
 
                 call.on('stream', remoteStream => {
+                    stopRinging();
                     document.getElementById('remoteAudio').srcObject = remoteStream;
                     document.getElementById('callStatusText').innerText = "المكالمة جارية الآن...";
                 });
-                call.on('close', () => { endCallUI(); });
+
+                call.on('close', () => {
+                    stopRinging();
+                    playTone('busy');
+                    setTimeout(() => playTone('busy'), 350);
+                    endCallUI();
+                });
             }).catch(err => {
+                stopRinging();
                 alert("تعذر الوصول للميكروفون.");
                 closeModal('callModal');
             });
         }
 
         window.acceptIncomingCall = function() {
+            stopRinging();
             closeModal('incomingModal');
             openModal('callModal');
             let callerNum = incomingCallData.peer;
@@ -687,6 +802,7 @@
         }
 
         window.rejectIncomingCall = function() {
+            stopRinging();
             if (incomingCallData) {
                 recordCallLog(incomingCallData.peer, currentUser.phone, 'missed');
                 incomingCallData.close();
@@ -695,11 +811,13 @@
         }
 
         window.endCall = function() {
+            stopRinging();
             if (currentCall) currentCall.close();
             endCallUI();
         }
 
         function endCallUI() {
+            stopRinging();
             closeModal('callModal');
             document.getElementById('remoteAudio').srcObject = null;
             currentCall = null;
