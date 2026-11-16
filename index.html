@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عيادة الشفاء الطبي</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+
+    <!-- Navbar -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <div id="navLogoContainer" class="bg-teal-600 text-white p-2 rounded-xl flex items-center justify-center w-10 h-10">
+                    <i class="fa-solid fa-stethoscope text-xl"></i>
+                </div>
+                <span class="text-xl font-bold text-teal-800">عيادة الشفاء الطبي</span>
+            </div>
+            <nav class="hidden md:flex space-x-6 space-x-reverse font-medium">
+                <button onclick="showSection('home')" class="hover:text-teal-600 transition">الرئيسية</button>
+                <button onclick="showSection('booking')" class="hover:text-teal-600 transition">حجز موعد</button>
+                <button onclick="showSection('posts')" class="hover:text-teal-600 transition">المنشورات والخدمات</button>
+                <button onclick="showSection('chat')" class="hover:text-teal-600 transition">الاستفسارات والشات</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto px-4 py-6 max-w-4xl">
+
+        <!-- 1. Home Section -->
+        <section id="section-home" class="space-y-6">
+            <div class="bg-gradient-to-r from-teal-600 to-teal-800 text-white p-8 rounded-2xl shadow-lg text-center">
+                <h1 class="text-3xl font-bold mb-3">أهلاً بك في عيادة الشفاء</h1>
+                <p class="text-teal-100 mb-6">نقدم أفضل الرعاية الصحية المتكاملة بإشراف أخصائيين متميزين.</p>
+                <button onclick="showSection('booking')" class="bg-white text-teal-800 font-bold px-6 py-3 rounded-xl shadow hover:bg-teal-50 transition">احجز موعدك الآن</button>
+            </div>
+
+            <!-- Posts rendered above the cards -->
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-teal-800"><i class="fa-solid fa-bullhorn ml-2"></i>أحدث المنشورات والعروض</h2>
+                <div id="homePostsContainer" class="space-y-4">
+                    <p class="text-slate-500 text-sm">جاري تحميل المنشورات ...</p>
+                </div>
+            </div>
+
+            <!-- Feature Cards Stacked Vertically -->
+            <div class="space-y-3 pt-4 border-t">
+                <div onclick="showSection('booking')" class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4 space-x-reverse cursor-pointer hover:bg-teal-50 transition">
+                    <div class="bg-teal-100 text-teal-700 p-3 rounded-xl text-xl"><i class="fa-solid fa-calendar-check"></i></div>
+                    <div>
+                        <h3 class="font-bold text-lg">حجز سريع</h3>
+                        <p class="text-sm text-slate-500">احجز موعدك بسهولة حسب اليوم والساعة المتاحة.</p>
+                    </div>
+                </div>
+
+                <div onclick="showSection('chat')" class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4 space-x-reverse cursor-pointer hover:bg-teal-50 transition">
+                    <div class="bg-teal-100 text-teal-700 p-3 rounded-xl text-xl"><i class="fa-solid fa-comments"></i></div>
+                    <div>
+                        <h3 class="font-bold text-lg">استفسارات فورية</h3>
+                        <p class="text-sm text-slate-500">تواصل معنا واستفسر عن حالتك بحرية.</p>
+                    </div>
+                </div>
+
+                <div onclick="showSection('posts')" class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4 space-x-reverse cursor-pointer hover:bg-teal-50 transition">
+                    <div class="bg-teal-100 text-teal-700 p-3 rounded-xl text-xl"><i class="fa-solid fa-user-doctor"></i></div>
+                    <div>
+                        <h3 class="font-bold text-lg">متابعة طبية</h3>
+                        <p class="text-sm text-slate-500">سجل كامل لزياراتك وملاحظات الطبيب.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Booking Section -->
+        <section id="section-booking" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h2 class="text-2xl font-bold text-teal-800 mb-4"><i class="fa-solid fa-calendar-plus ml-2"></i>حجز موعد جديد (حد أقصى مريضين لكل ساعة)</h2>
+            <form id="bookingForm" onsubmit="handleBooking(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">الاسم الكامل:</label>
+                    <input type="text" id="patientName" required class="w-full border rounded-xl p-3 focus:outline-teal-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">رقم الهاتف:</label>
+                    <input type="tel" id="patientPhone" required class="w-full border rounded-xl p-3 focus:outline-teal-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">تاريخ الموعد (اليوم):</label>
+                    <input type="date" id="bookingDate" required class="w-full border rounded-xl p-3 focus:outline-teal-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">ساعة الموعد:</label>
+                    <input type="time" id="bookingTime" required class="w-full border rounded-xl p-3 focus:outline-teal-600">
+                </div>
+                <button type="submit" class="w-full bg-teal-600 text-white font-bold p-3 rounded-xl hover:bg-teal-700 transition">تأكيد الحجز</button>
+            </form>
+            <div id="bookingMsg" class="mt-4 text-center font-medium"></div>
+        </section>
+
+        <!-- 3. Posts Section -->
+        <section id="section-posts" class="hidden space-y-6">
+            <h2 class="text-2xl font-bold text-teal-800"><i class="fa-solid fa-bullhorn ml-2"></i>منشورات ونصائح العيادة</h2>
+            <div id="postsContainer" class="space-y-4"></div>
+        </section>
+
+        <!-- 4. Chat / Inquiry Section -->
+        <section id="section-chat" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[500px]">
+            <h2 class="text-2xl font-bold text-teal-800 mb-4"><i class="fa-solid fa-headset ml-2"></i>الاستفسارات المباشرة</h2>
+            <div id="chatMessages" class="flex-grow overflow-y-auto space-y-3 p-3 bg-slate-50 rounded-xl border mb-4">
+                <p class="text-slate-500 text-sm">جاري تحميل الشات...</p>
+            </div>
+            <form onsubmit="sendChatMessage(event)" class="flex gap-2 items-center">
+                <label class="cursor-pointer bg-slate-200 p-3 rounded-xl hover:bg-slate-300 transition">
+                    <i class="fa-solid fa-image text-slate-700"></i>
+                    <input type="file" id="chatImageInput" accept="image/*" class="hidden">
+                </label>
+                <input type="text" id="chatInput" placeholder="اكتب استفسارك هنا..." class="flex-grow border rounded-xl p-3 focus:outline-teal-600" required>
+                <button type="submit" class="bg-teal-600 text-white px-5 py-3 rounded-xl hover:bg-teal-700 transition"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </section>
+
+        <!-- 5. Admin Dashboard Section -->
+        <section id="section-admin" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm">
+                <h2 class="text-xl font-bold text-teal-800"><i class="fa-solid fa-user-shield ml-2"></i>لوحة تحكم الأدمن</h2>
+                <button onclick="logoutAdmin()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm">تسجيل خروج</button>
+            </div>
+
+            <!-- Admin Tabs Navigation -->
+            <div class="flex flex-wrap gap-2">
+                <button onclick="switchAdminTab('today')" class="admin-tab-btn bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium">مرضى اليوم</button>
+                <button onclick="switchAdminTab('search')" class="admin-tab-btn bg-white text-slate-700 border px-4 py-2 rounded-lg text-sm font-medium">بحث ومتابعة المرضى</button>
+                <button onclick="switchAdminTab('calendar')" class="admin-tab-btn bg-white text-slate-700 border px-4 py-2 rounded-lg text-sm font-medium">التقويم والمواعيد</button>
+                <button onclick="switchAdminTab('posts-mgr')" class="admin-tab-btn bg-white text-slate-700 border px-4 py-2 rounded-lg text-sm font-medium">إدارة المنشورات</button>
+                <button onclick="switchAdminTab('settings')" class="admin-tab-btn bg-white text-slate-700 border px-4 py-2 rounded-lg text-sm font-medium">الإعدادات</button>
+            </div>
+
+            <!-- Admin Tab: Today's Patients -->
+            <div id="admin-tab-today" class="admin-content bg-white p-6 rounded-2xl shadow-sm space-y-4">
+                <h3 class="font-bold text-lg text-teal-800">حجوزات اليوم (<span id="todayDateStr"></span>)</h3>
+                <div id="todayPatientsList" class="space-y-3"></div>
+            </div>
+
+            <!-- Admin Tab: Search & Patient Records -->
+            <div id="admin-tab-search" class="admin-content hidden bg-white p-6 rounded-2xl shadow-sm space-y-4">
+                <h3 class="font-bold text-lg text-teal-800">بحث عن مريض وتعديل بياناته (عند المراجعة)</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="searchInput" placeholder="ابحث باسم المريض..." class="flex-grow border rounded-xl p-3 focus:outline-teal-600">
+                    <button onclick="searchPatients()" class="bg-teal-600 text-white px-6 py-3 rounded-xl">بحث</button>
+                </div>
+                <div id="searchResults" class="space-y-4 mt-4"></div>
+            </div>
+
+            <!-- Admin Tab: Visual Monthly Calendar Grid -->
+            <div id="admin-tab-calendar" class="admin-content hidden bg-white p-6 rounded-2xl shadow-sm space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-xl text-teal-800" id="calendarMonthTitle">نوفمبر</h3>
+                    <div class="flex space-x-2 space-x-reverse">
+                        <button onclick="changeMonth(-1)" class="bg-slate-100 px-3 py-1 rounded-lg text-sm font-bold">&gt;</button>
+                        <button onclick="changeMonth(1)" class="bg-slate-100 px-3 py-1 rounded-lg text-sm font-bold">&lt;</button>
+                    </div>
+                </div>
+
+                <!-- Month Grid Container -->
+                <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-inner">
+                    <!-- Weekdays Header -->
+                    <div class="grid grid-cols-7 text-center text-xs font-semibold text-slate-400 mb-3">
+                        <span>أحد</span>
+                        <span>إثنين</span>
+                        <span>ثلاثاء</span>
+                        <span>أربعاء</span>
+                        <span>خميس</span>
+                        <span>جمعة</span>
+                        <span>سبت</span>
+                    </div>
+                    <!-- Days Grid -->
+                    <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1 text-center"></div>
+                </div>
+
+                <!-- Selected Date Appointments & Quick Add -->
+                <div id="selectedDateContainer" class="space-y-4 border-t pt-4">
+                    <div class="flex justify-between items-center bg-teal-50 p-3 rounded-xl border border-teal-100">
+                        <span id="selectedDateLabel" class="font-bold text-teal-800">اختر يوماً من التقويم</span>
+                        <button onclick="toggleDocAddForm()" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fa-solid fa-plus ml-1"></i> إضافة حجز بهذا التاريخ</button>
+                    </div>
+
+                    <!-- Hidden Doctor Add Form for Selected Date -->
+                    <div id="docAddFormContainer" class="hidden bg-slate-50 p-4 rounded-xl border space-y-3">
+                        <h4 class="font-bold text-sm text-teal-800">إضافة موعد جديد للتاريخ المختار</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <input type="text" id="calPatName" placeholder="اسم المريض" class="border p-2 rounded-lg text-sm bg-white">
+                            <input type="tel" id="calPatPhone" placeholder="رقم الهاتف" class="border p-2 rounded-lg text-sm bg-white">
+                            <input type="time" id="calPatTime" class="border p-2 rounded-lg text-sm bg-white">
+                        </div>
+                        <button onclick="doctorAddFromCalendar()" class="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm">حفظ الحجز بالسحابة</button>
+                    </div>
+
+                    <div id="calendarAppointmentsList" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- Admin Tab: Manage Posts -->
+            <div id="admin-tab-posts-mgr" class="admin-content hidden bg-white p-6 rounded-2xl shadow-sm space-y-6">
+                <h3 class="font-bold text-lg text-teal-800">إضافة منشور جديد مع صورة</h3>
+                <form onsubmit="addPost(event)" class="space-y-3">
+                    <input type="text" id="postTitle" placeholder="عنوان المنشور أو الخدمة" required class="w-full border rounded-xl p-3">
+                    <textarea id="postText" placeholder="محتوى المنشور..." required class="w-full border rounded-xl p-3"></textarea>
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-600">اختر صورة من ملفات الهاتف:</label>
+                        <input type="file" id="postImage" accept="image/*" class="w-full border rounded-xl p-3">
+                    </div>
+                    <button type="submit" class="bg-teal-600 text-white px-6 py-2 rounded-xl">نشر المنشور بالسحابة</button>
+                </form>
+
+                <hr class="my-4">
+                <h3 class="font-bold text-lg text-teal-800">المنشورات الحالية (إدارة وحذف)</h3>
+                <div id="adminPostsList" class="space-y-3"></div>
+            </div>
+
+            <!-- Admin Tab: Settings -->
+            <div id="admin-tab-settings" class="admin-content hidden bg-white p-6 rounded-2xl shadow-sm space-y-6">
+                <h3 class="font-bold text-lg text-teal-800">إعدادات العيادة</h3>
+                
+                <!-- Logo Upload -->
+                <div class="space-y-2 border-b pb-4">
+                    <label class="block font-medium text-slate-700">تغيير شعار العيادة (اللوجو):</label>
+                    <input type="file" id="logoInput" accept="image/*" class="w-full border rounded-xl p-3">
+                    <button onclick="updateLogo()" class="bg-teal-600 text-white px-6 py-2 rounded-xl text-sm">حفظ وتحديث الشعار بالسحابة</button>
+                </div>
+
+                <!-- Password Change -->
+                <div class="space-y-2">
+                    <label class="block font-medium text-slate-700">تغيير كلمة سر الأدمن:</label>
+                    <input type="password" id="newPasswordInput" placeholder="كلمة المرور الجديدة" class="border rounded-xl p-3 w-full mb-2">
+                    <button onclick="updatePassword()" class="bg-teal-600 text-white px-6 py-2 rounded-xl text-sm">تحديث كلمة المرور</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer with Secret Admin Trigger -->
+    <footer class="bg-white border-t mt-auto py-4 text-center text-sm text-slate-500 relative">
+        <p>جميع الحقوق محفوظة © عيادة الشفاء الطبي 2026</p>
+        <div id="secretAdminTrigger" class="absolute bottom-0 left-0 w-12 h-12 cursor-pointer z-50"></div>
+    </footer>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center z-50">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-80 space-y-4">
+            <h3 class="font-bold text-lg text-teal-800">دخول لوحة التحكم</h3>
+            <input type="password" id="adminPasswordInput" placeholder="كلمة المرور" class="w-full border rounded-xl p-3 focus:outline-teal-600">
+            <div class="flex justify-end space-x-2 space-x-reverse">
+                <button onclick="closePasswordModal()" class="px-4 py-2 border rounded-xl text-slate-600">إلغاء</button>
+                <button onclick="verifyAdminPassword()" class="px-4 py-2 bg-teal-600 text-white rounded-xl">دخول</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase & App Logic Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, doc, setDoc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCg3I6T09ru6ZbhZdpjWDj-6C3mmjtoUyA",
+            authDomain: "shsn37.firebaseapp.com",
+            projectId: "shsn37",
+            storageBucket: "shsn37.firebasestorage.app",
+            messagingSenderId: "707045681992",
+            appId: "1:707045681992:web:2cebf35d5332423a94217d",
+            measurementId: "G-F8BN1PQ1VD"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentCalendarDate = new Date();
+        let selectedDateStr = new Date().toISOString().split('T')[0];
+
+        // Expose functions globally for HTML event handlers
+        window.showSection = showSection;
+        window.handleBooking = handleBooking;
+        window.sendChatMessage = sendChatMessage;
+        window.switchAdminTab = switchAdminTab;
+        window.savePatientDetails = savePatientDetails;
+        window.searchPatients = searchPatients;
+        window.loadCalendarAppointments = loadCalendarAppointments;
+        window.loadCalendarAppointmentsForSelected = loadCalendarAppointmentsForSelected;
+        window.doctorAddFromCalendar = doctorAddFromCalendar;
+        window.toggleDocAddForm = toggleDocAddForm;
+        window.addPost = addPost;
+        window.deletePost = deletePost;
+        window.updatePassword = updatePassword;
+        window.updateLogo = updateLogo;
+        window.closePasswordModal = closePasswordModal;
+        window.verifyAdminPassword = verifyAdminPassword;
+        window.logoutAdmin = logoutAdmin;
+        window.changeMonth = changeMonth;
+        window.selectCalendarDate = selectCalendarDate;
+
+        // Initialize App on load
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadSettings();
+            loadHomePosts();
+            loadChat();
+        });
+
+        // Load Settings (Logo & Admin Password) from Firestore
+        async function loadSettings() {
+            try {
+                const docRef = doc(db, "settings", "config");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.adminPass) localStorage.setItem('adminPass', data.adminPass);
+                    if (data.clinicLogo) {
+                        localStorage.setItem('clinicLogo', data.clinicLogo);
+                        applyLogo(data.clinicLogo);
+                    }
+                } else {
+                    await setDoc(docRef, { adminPass: 'oday', clinicLogo: '' });
+                    localStorage.setItem('adminPass', 'oday');
+                }
+            } catch (err) {
+                console.error("Error loading settings:", err);
+            }
+        }
+
+        function applyLogo(logoUrl) {
+            const container = document.getElementById('navLogoContainer');
+            if (logoUrl) {
+                container.innerHTML = `<img src="${logoUrl}" class="w-full h-full object-cover rounded-xl">`;
+                container.className = "rounded-xl overflow-hidden w-10 h-10 flex items-center justify-center";
+            }
+        }
+
+        async function updateLogo() {
+            const fileInput = document.getElementById('logoInput');
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const base64Img = e.target.result;
+                    try {
+                        await setDoc(doc(db, "settings", "config"), { clinicLogo: base64Img }, { merge: true });
+                        localStorage.setItem('clinicLogo', base64Img);
+                        applyLogo(base64Img);
+                        alert('تم تحديث شعار العيادة وحفظه في السحابة بنجاح!');
+                        fileInput.value = '';
+                    } catch (err) {
+                        alert('حدث خطأ أثناء رفع اللوجو بالسحابة.');
+                    }
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                alert('يرجى اختيار صورة أولاً.');
+            }
+        }
+
+        // Navigation
+        function showSection(sectionId) {
+            ['home', 'booking', 'posts', 'chat', 'admin'].forEach(s => {
+                document.getElementById(`section-${s}`).classList.add('hidden');
+            });
+            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+            if (sectionId === 'home') loadHomePosts();
+            if (sectionId === 'posts') loadPosts();
+            if (sectionId === 'chat') loadChat();
+            window.scrollTo(0, 0);
+        }
+
+        // Secret Admin Login Trigger (5 clicks bottom-left)
+        let clickCount = 0;
+        document.getElementById('secretAdminTrigger').addEventListener('click', () => {
+            clickCount++;
+            setTimeout(() => { clickCount = 0; }, 2000);
+            if (clickCount >= 5) {
+                clickCount = 0;
+                document.getElementById('passwordModal').classList.remove('hidden');
+            }
+        });
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.add('hidden');
+            document.getElementById('adminPasswordInput').value = '';
+        }
+
+        async function verifyAdminPassword() {
+            const pass = document.getElementById('adminPasswordInput').value;
+            const currentPass = localStorage.getItem('adminPass') || 'oday';
+            if (pass === currentPass) {
+                closePasswordModal();
+                showSection('admin');
+                initAdmin();
+            } else {
+                alert('كلمة المرور غير صحيحة!');
+            }
+        }
+
+        function logoutAdmin() {
+            showSection('home');
+        }
+
+        // Booking logic with Firebase
+        async function handleBooking(e) {
+            e.preventDefault();
+            const name = document.getElementById('patientName').value;
+            const phone = document.getElementById('patientPhone').value;
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingTime').value;
+
+            const msgDiv = document.getElementById('bookingMsg');
+            msgDiv.innerText = "جاري تأكيد الحجز...";
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "appointments"));
+                let hourCount = 0;
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.date === date && data.time === time) {
+                        hourCount++;
+                    }
+                });
+
+                const maxPerHour = 2; // حد أقصى مريضين لكل ساعة
+                if (hourCount >= maxPerHour) {
+                    msgDiv.className = "mt-4 text-center font-medium text-red-600";
+                    msgDiv.innerText = `عذراً، لقد اكتمل الحجز في تمام الساعة (${time}) لهذا اليوم (مريضين كحد أقصى). يرجى اختيار ساعة أخرى.`;
+                    return;
+                }
+
+                await addDoc(collection(db, "appointments"), {
+                    name,
+                    phone,
+                    date,
+                    time,
+                    notes: '',
+                    paid: 0,
+                    total: 0,
+                    procedures: '',
+                    createdAt: Date.now()
+                });
+
+                msgDiv.className = "mt-4 text-center font-medium text-emerald-600";
+                msgDiv.innerText = "تم حجز موعدك بنجاح وحفظه في السحابة! سنتواصل معك قريباً.";
+                document.getElementById('bookingForm').reset();
+            } catch (err) {
+                console.error(err);
+                msgDiv.className = "mt-4 text-center font-medium text-red-600";
+                msgDiv.innerText = "حدث خطأ أثناء الحجز بالسحابة.";
+            }
+        }
+
+        // Load Posts from Firestore
+        async function loadHomePosts() {
+            const container = document.getElementById('homePostsContainer');
+            try {
+                const querySnapshot = await getDocs(collection(db, "posts"));
+                const posts = [];
+                querySnapshot.forEach((docSnap) => {
+                    posts.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p class="text-slate-500 text-sm">لا توجد منشورات حالياً.</p>';
+                    return;
+                }
+                container.innerHTML = posts.map(p => `
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-2">
+                        <h3 class="text-lg font-bold text-teal-800">${p.title}</h3>
+                        <p class="text-slate-600 text-sm whitespace-pre-line">${p.text}</p>
+                        ${p.image ? `<img src="${p.image}" class="rounded-xl max-h-48 w-full object-cover">` : ''}
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500 text-sm">فشل تحميل المنشورات.</p>';
+            }
+        }
+
+        async function loadPosts() {
+            await loadHomePosts();
+            const container = document.getElementById('postsContainer');
+            if (container) container.innerHTML = document.getElementById('homePostsContainer').innerHTML;
+        }
+
+        // Chat Logic with Firestore
+        async function loadChat() {
+            const container = document.getElementById('chatMessages');
+            try {
+                const querySnapshot = await getDocs(collection(db, "chatMessages"));
+                const messages = [];
+                querySnapshot.forEach((docSnap) => {
+                    messages.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                messages.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+                if (messages.length === 0) {
+                    container.innerHTML = '<p class="text-slate-500 text-sm text-center">لا توجد رسائل سابقة.</p>';
+                    return;
+                }
+
+                container.innerHTML = messages.map(m => `
+                    <div class="flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}">
+                        <div class="max-w-[75%] p-3 rounded-xl ${m.sender === 'user' ? 'bg-teal-600 text-white rounded-bl-none' : 'bg-slate-200 text-slate-800 rounded-br-none'}">
+                            ${m.text}
+                            ${m.image ? `<img src="${m.image}" class="mt-2 rounded-lg max-h-40 w-full object-cover">` : ''}
+                        </div>
+                    </div>
+                `).join('');
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function sendChatMessage(e) {
+            e.preventDefault();
+            const text = document.getElementById('chatInput').value;
+            const imageInput = document.getElementById('chatImageInput');
+
+            const saveMsg = async (imgData = '') => {
+                try {
+                    await addDoc(collection(db, "chatMessages"), {
+                        sender: 'user',
+                        text,
+                        image: imgData,
+                        createdAt: Date.now()
+                    });
+                    
+                    setTimeout(async () => {
+                        await addDoc(collection(db, "chatMessages"), {
+                            sender: 'clinic',
+                            text: 'تم استلام استفسارك وسيتم الرد عليك من قِبل الطبيب قريباً.',
+                            image: '',
+                            createdAt: Date.now() + 100
+                        });
+                        loadChat();
+                    }, 1000);
+
+                    document.getElementById('chatInput').value = '';
+                    imageInput.value = '';
+                    loadChat();
+                } catch (err) {
+                    alert('فشل إرسال الرسالة.');
+                }
+            };
+
+            if (imageInput.files && imageInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(uploadE) {
+                    saveMsg(uploadE.target.result);
+                };
+                reader.readAsDataURL(imageInput.files[0]);
+            } else {
+                saveMsg('');
+            }
+        }
+
+        // Admin Dashboard Functions
+        function initAdmin() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('todayDateStr').innerText = today;
+            loadTodayPatients();
+            renderCalendarGrid();
+        }
+
+        function switchAdminTab(tabName) {
+            document.querySelectorAll('.admin-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.admin-tab-btn').forEach(b => {
+                b.className = "admin-tab-btn bg-white text-slate-700 border px-4 py-2 rounded-lg text-sm font-medium";
+            });
+
+            document.getElementById(`admin-tab-${tabName}`).classList.remove('hidden');
+            event.target.className = "admin-tab-btn bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium";
+
+            if (tabName === 'today') loadTodayPatients();
+            if (tabName === 'calendar') renderCalendarGrid();
+            if (tabName === 'posts-mgr') loadAdminPosts();
+        }
+
+        async function loadTodayPatients() {
+            const today = new Date().toISOString().split('T')[0];
+            const container = document.getElementById('todayPatientsList');
+            container.innerHTML = '<p class="text-slate-500">جاري التحميل...</p>';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "appointments"));
+                const todayList = [];
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.date === today) {
+                        todayList.push({ id: docSnap.id, ...data });
+                    }
+                });
+
+                if (todayList.length === 0) {
+                    container.innerHTML = '<p class="text-slate-500">لا توجد حجوزات لهذا اليوم.</p>';
+                    return;
+                }
+
+                container.innerHTML = todayList.map(a => renderPatientCard(a)).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500">فشل جلب الحجوزات.</p>';
+            }
+        }
+
+        function renderPatientCard(p) {
+            return `
+                <div class="border p-4 rounded-xl space-y-3 bg-slate-50" id="patient-card-${p.id}">
+                    <div class="flex justify-between items-center font-bold">
+                        <span>${p.name} (${p.phone})</span>
+                        <span class="text-sm text-teal-600">📅 ${p.date} ⏰ ${p.time || 'غير محدد'}</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-xs text-slate-500">الإجراء / العلاج:</label>
+                            <input type="text" id="proc-${p.id}" value="${p.procedures || ''}" class="w-full border p-2 rounded-lg text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500">المدفوع:</label>
+                            <input type="number" id="paid-${p.id}" value="${p.paid || 0}" class="w-full border p-2 rounded-lg text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500">المبلغ الكلي:</label>
+                            <input type="number" id="total-${p.id}" value="${p.total || 0}" class="w-full border p-2 rounded-lg text-sm bg-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500">ملاحظات الطبيب:</label>
+                        <textarea id="notes-${p.id}" class="w-full border p-2 rounded-lg text-sm bg-white">${p.notes || ''}</textarea>
+                    </div>
+                    <button onclick="savePatientDetails('${p.id}')" class="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium">حفظ التعديلات بالسحابة</button>
+                </div>
+            `;
+        }
+
+        async function savePatientDetails(id) {
+            try {
+                const procedures = document.getElementById(`proc-${id}`).value;
+                const paid = parseFloat(document.getElementById(`paid-${id}`).value) || 0;
+                const total = parseFloat(document.getElementById(`total-${id}`).value) || 0;
+                const notes = document.getElementById(`notes-${id}`).value;
+
+                await updateDoc(doc(db, "appointments", id), {
+                    procedures,
+                    paid,
+                    total,
+                    notes
+                });
+
+                alert('تم حفظ البيانات وتحديثها في السحابة بنجاح!');
+            } catch (err) {
+                alert('فشل حفظ البيانات.');
+            }
+        }
+
+        async function searchPatients() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const container = document.getElementById('searchResults');
+            container.innerHTML = '<p class="text-slate-500">جاري البحث...</p>';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "appointments"));
+                const results = [];
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.name && data.name.toLowerCase().includes(query)) {
+                        results.push({ id: docSnap.id, ...data });
+                    }
+                });
+
+                if (results.length === 0) {
+                    container.innerHTML = '<p class="text-slate-500">لم يتم العثور على نتائج.</p>';
+                    return;
+                }
+                container.innerHTML = results.map(p => renderPatientCard(p)).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500">فشل عملية البحث.</p>';
+            }
+        }
+
+        // Monthly Grid Calendar Renderer & Compatibility Function
+        async function renderCalendarGrid() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+            document.getElementById('calendarMonthTitle').innerText = `${monthNames[month]} ${year}`;
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            const gridContainer = document.getElementById('calendarDaysGrid');
+            gridContainer.innerHTML = '';
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                gridContainer.innerHTML += `<div></div>`;
+            }
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "appointments"));
+                const appointments = [];
+                querySnapshot.forEach((docSnap) => {
+                    appointments.push(docSnap.data());
+                });
+
+                for (let day = 1; day <= totalDays; day++) {
+                    const formattedMonth = String(month + 1).padStart(2, '0');
+                    const formattedDay = String(day).padStart(2, '0');
+                    const dateStr = `${year}-${formattedMonth}-${formattedDay}`;
+
+                    const dayAppointments = appointments.filter(a => a.date === dateStr);
+                    const hasAppts = dayAppointments.length > 0;
+                    const isSelected = selectedDateStr === dateStr;
+
+                    gridContainer.innerHTML += `
+                        <div onclick="selectCalendarDate('${dateStr}')" class="p-2 rounded-xl cursor-pointer transition flex flex-col items-center justify-center h-16 ${isSelected ? 'bg-teal-600 text-white shadow-lg border-2 border-white' : 'hover:bg-slate-800 text-slate-200'}">
+                            <span class="font-bold text-sm">${day}</span>
+                            ${hasAppts ? `<span class="w-1.5 h-1.5 bg-teal-400 rounded-full mt-1"></span>` : ''}
+                        </div>
+                    `;
+                }
+
+                loadCalendarAppointmentsForSelected();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function changeMonth(direction) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
+            renderCalendarGrid();
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedDateStr = dateStr;
+            renderCalendarGrid();
+        }
+
+        async function loadCalendarAppointmentsForSelected() {
+            document.getElementById('selectedDateLabel').innerText = `حجوزات يوم: ${selectedDateStr}`;
+            const container = document.getElementById('calendarAppointmentsList');
+            container.innerHTML = '<p class="text-slate-500 text-sm">جاري تحميل المواعيد...</p>';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "appointments"));
+                const list = [];
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.date === selectedDateStr) {
+                        list.push({ id: docSnap.id, ...data });
+                    }
+                });
+
+                if (list.length === 0) {
+                    container.innerHTML = '<p class="text-slate-500 text-sm">لا توجد مواعيد في هذا التاريخ.</p>';
+                    return;
+                }
+                container.innerHTML = list.map(p => renderPatientCard(p)).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500 text-sm">فشل تحميل المواعيد.</p>';
+            }
+        }
+
+        // Compatibility function to fix missing loadCalendarAppointments error
+        function loadCalendarAppointments() {
+            loadCalendarAppointmentsForSelected();
+        }
+
+        function toggleDocAddForm() {
+            const form = document.getElementById('docAddFormContainer');
+            form.classList.toggle('hidden');
+        }
+
+        async function doctorAddFromCalendar() {
+            const name = document.getElementById('calPatName').value.trim();
+            const phone = document.getElementById('calPatPhone').value.trim();
+            const time = document.getElementById('calPatTime').value;
+
+            if (!name || !phone || !time) {
+                alert('يرجى تعبئة جميع الحقول.');
+                return;
+            }
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "appointments"));
+                let hourCount = 0;
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.date === selectedDateStr && data.time === time) {
+                        hourCount++;
+                    }
+                });
+
+                if (hourCount >= 2) {
+                    alert('عذراً، لقد اكتمل الحجز في هذه الساعة (مريضين كحد أقصى).');
+                    return;
+                }
+
+                await addDoc(collection(db, "appointments"), {
+                    name,
+                    phone,
+                    date: selectedDateStr,
+                    time,
+                    notes: '',
+                    paid: 0,
+                    total: 0,
+                    procedures: '',
+                    createdAt: Date.now()
+                });
+
+                alert('تم إضافة الحجز بنجاح في السحابة!');
+                document.getElementById('calPatName').value = '';
+                document.getElementById('calPatPhone').value = '';
+                document.getElementById('calPatTime').value = '';
+                document.getElementById('docAddFormContainer').classList.add('hidden');
+
+                renderCalendarGrid();
+            } catch (err) {
+                alert('حدث خطأ أثناء إضافة الحجز.');
+            }
+        }
+
+        // Admin Posts Management
+        async function addPost(e) {
+            e.preventDefault();
+            const title = document.getElementById('postTitle').value;
+            const text = document.getElementById('postText').value;
+            const imageInput = document.getElementById('postImage');
+
+            const savePostData = async (imgData = '') => {
+                try {
+                    await addDoc(collection(db, "posts"), {
+                        title,
+                        text,
+                        image: imgData,
+                        createdAt: Date.now()
+                    });
+                    alert('تم نشر المنشور بالسحابة بنجاح!');
+                    e.target.reset();
+                    loadAdminPosts();
+                    loadHomePosts();
+                } catch (err) {
+                    alert('فشل نشر المنشور.');
+                }
+            };
+
+            if (imageInput.files && imageInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(uploadE) {
+                    savePostData(uploadE.target.result);
+                };
+                reader.readAsDataURL(imageInput.files[0]);
+            } else {
+                savePostData('');
+            }
+        }
+
+        async function loadAdminPosts() {
+            const container = document.getElementById('adminPostsList');
+            container.innerHTML = '<p class="text-slate-500">جاري التحميل...</p>';
+            try {
+                const querySnapshot = await getDocs(collection(db, "posts"));
+                const posts = [];
+                querySnapshot.forEach((docSnap) => {
+                    posts.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p class="text-slate-500">لا توجد منشورات حالياً.</p>';
+                    return;
+                }
+                container.innerHTML = posts.map(p => `
+                    <div class="border p-4 rounded-xl flex justify-between items-center bg-slate-50 gap-2">
+                        <div class="overflow-hidden">
+                            <h4 class="font-bold text-teal-800">${p.title}</h4>
+                            <p class="text-sm text-slate-600 truncate">${p.text}</p>
+                        </div>
+                        <button onclick="deletePost('${p.id}')" class="bg-red-500 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap"><i class="fa-solid fa-trash"></i> حذف</button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500">فشل تحميل المنشورات.</p>';
+            }
+        }
+
+        async function deletePost(id) {
+            if (confirm('هل أنت متأكد من حذف هذا المنشور من السحابة؟')) {
+                try {
+                    await deleteDoc(doc(db, "posts", id));
+                    loadAdminPosts();
+                    loadHomePosts();
+                } catch (err) {
+                    alert('فشل الحذف.');
+                }
+            }
+        }
+
+        async function updatePassword() {
+            const newPass = document.getElementById('newPasswordInput').value;
+            if (newPass) {
+                try {
+                    await setDoc(doc(db, "settings", "config"), { adminPass: newPass }, { merge: true });
+                    localStorage.setItem('adminPass', newPass);
+                    alert('تم تحديث كلمة المرور وحفظها في السحابة بنجاح!');
+                    document.getElementById('newPasswordInput').value = '';
+                } catch (err) {
+                    alert('فشل تحديث كلمة المرور.');
+                }
+            } else {
+                alert('يرجى إدخال كلمة المرور الجديدة.');
+            }
+        }
+    </script>
+</body>
+</html>
